@@ -16,7 +16,7 @@ public class RPCController implements Closeable
     private final JSONDeserializer<RPCResponse> deserializer = new JSONDeserializer<>();
 
 
-    public RPCController(String serverAddress, int serverPort) throws IOException
+    public RPCController(String serverAddress, int serverPort) throws RPCException
     {
         connect(serverAddress, serverPort);
     }
@@ -25,11 +25,18 @@ public class RPCController implements Closeable
     {
     }
 
-    public void connect(String serverAddress, int serverPort) throws IOException
+    public void connect(String serverAddress, int serverPort) throws RPCException
     {
-        this.socket = new Socket(serverAddress, serverPort);
-        this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        this.out = new PrintWriter(socket.getOutputStream(), true);
+        try
+        {
+            this.socket = new Socket(serverAddress, serverPort);
+            this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.out = new PrintWriter(socket.getOutputStream(), true);
+        }
+        catch (Exception e)
+        {
+            throw new RPCException("Error connecting to " + serverAddress + ":" + serverPort, e);
+        }
     }
 
     @Override
@@ -65,12 +72,20 @@ public class RPCController implements Closeable
             }
     }
 
-    public RPCResponse sendRequest(RPCRequest request) throws IOException
+    public RPCResponse send(RPCRequest request) throws RPCException
     {
         String line = serializer.deepSerialize(request);
         out.println(line);
         out.flush();
-        String response = in.readLine();
+        String response;
+        try
+        {
+            response = in.readLine();
+        }
+        catch (IOException e)
+        {
+            throw new RPCException("Error reading response from server", e);
+        }
         return deserializer.deserialize(response, RPCResponse.class);
     }
 }
