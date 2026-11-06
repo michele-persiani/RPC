@@ -38,22 +38,22 @@ public class RPCServer
         return instance;
     }
 
-    public RPCServer register(RPCHandler handler)
+    public void register(RPCHandler handler)
     {
         if(handlers.stream().anyMatch(h -> h.endpoint().equals(handler.endpoint())))
             throw new IllegalArgumentException(String.format("Endpoint %s is already registered", handler.endpoint()));
         handlers.add(handler);
         servedRequests.put(handler.endpoint(), 0);
         logger.info("Registered handler for " + handler.endpoint());
-        return this;
     }
 
-    public RPCServer unregister(RPCHandler handler)
+    public void unregister(RPCHandler handler)
     {
+        if(!handlers.contains(handler))
+            return;
         handlers.remove(handler);
         servedRequests.remove(handler.endpoint());
         logger.info("Unregistered handler for " + handler.endpoint());
-        return this;
     }
 
 
@@ -164,6 +164,7 @@ public class RPCServer
         @Override
         public void close()
         {
+            logger.info("Closed connection for " + socket.getRemoteSocketAddress());
             synchronized (connections)
             {
                 connections.remove(this);
@@ -183,7 +184,6 @@ public class RPCServer
                 in = null;
             }
 
-            logger.info("Closed connection for " + socket.getRemoteSocketAddress());
             try
             {
                 socket.close();
